@@ -1,0 +1,11 @@
+# Local development. Spring Boot starts this automatically on `./gradlew bootRun`.
+name: swapwise
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: swapwise
+      POSTGRES_PASSWORD: swapwise
+      POSTGRES_DB: swapwise
+    ports:
+      - "5432:5432"

@@ -11,7 +11,16 @@ Read this before changing code in this repository.
 ## Build commands
 - All checks for the core module: `./gradlew :core:optimizer:check`
 - One test class: `./gradlew :core:optimizer:test --tests "dev.swapwise.optimizer.OptimizerTest"`
+- Backend checks (needs Docker for Testcontainers): `cd backend && ./gradlew check`
+- Run the backend locally: `cd backend && ./gradlew bootRun`
 - Format: `./gradlew spotlessApply`
+
+## Backend conventions
+- Package by feature: `parsing`, `catalog`, `events`, `security`, `shared`.
+- Plain SQL with `JdbcClient`; every schema change is a new Flyway migration, never an edit to an old one.
+- Throw the exceptions in `shared/ApiErrors.kt`; Spring renders them as problem details.
+- New settings go in `SwapwiseProperties`, not `@Value`.
+- Integration tests extend `BaseIT` and use `FakeReceiptLineParser`; they never call a real LLM.
 
 ## Rules
 - Money is `Long` cents, never `Double`.
