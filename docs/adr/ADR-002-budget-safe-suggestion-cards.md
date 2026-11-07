@@ -22,7 +22,13 @@ Build cards so that any combination of accepted cards stays within budget:
 * A pricier swap that cannot be paid for either way is not shown.
 * Swaps that raise carbon are never shown, even if the optimizer used them to save money.
 
-Cards are ranked by carbon saved per unit of change (`kgCo2eSaved / (1 + disruption)`).
+Candidate swaps come from every basket on the Pareto front: for each receipt line, the swap with the best card
+score is kept. Cards are ranked by that score, carbon saved per unit of change (`kgCo2eSaved / (1 + disruption)`).
+
+Why candidates come from the whole front rather than one chosen basket: a set of swaps that makes great cards
+can be dominated as a whole. "Chicken instead of beef, plus oat milk" is dominated by "lentils instead of beef"
+alone, yet it gives two more acceptable cards. Since cards are accepted one at a time, they are chosen one at a
+time. (Found by an end-to-end test; first version picked a single basket.)
 
 `SuggestionPickerTest` checks every subset of the cards for 60 random receipts.
 

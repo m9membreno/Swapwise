@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="scan_title">Scan a receipt</string>
+    <string name="scan_hint">Lay the receipt flat in good light and fit the whole item list in the photo.</string>
+    <string name="scan_take_photo">Take a photo</string>
+    <string name="scan_choose_photo">Choose a photo</string>
+    <string name="scan_error_no_text">No text found. Try again with more light and the receipt filling the photo.</string>
+    <string name="scan_error_failed">Could not read the photo. Please try again.</string>
+</resources>

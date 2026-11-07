@@ -100,4 +100,22 @@ class SuggestionPickerTest {
         )
         assertEquals("chicken", engine.suggest(problem).single().swaps.single().to.id)
     }
+
+    @Test
+    fun `shows good cards even when their combined basket is dominated on the front`() {
+        // Beef: chicken (same category) or lentils (different). Milk: oat milk at the same price.
+        // "Chicken + oat milk" is dominated by "lentils" alone, but makes two better cards than lentils makes one.
+        val problem = SwapProblem(
+            listOf(
+                BasketLine(
+                    product("beef", 1_300, 30.0),
+                    1,
+                    listOf(alt(product("chicken", 900, 6.0)), alt(product("lentils", 400, 1.0), Familiarity.DIFFERENT_CATEGORY)),
+                ),
+                BasketLine(product("milk", 300, 2.6), 1, listOf(alt(product("oat", 300, 0.8)))),
+            ),
+        )
+        val shown = engine.suggest(problem).flatMap { card -> card.swaps.map { it.to.id } }.toSet()
+        assertEquals(setOf("chicken", "oat"), shown)
+    }
 }

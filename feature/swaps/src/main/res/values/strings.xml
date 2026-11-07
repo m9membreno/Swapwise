@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ledger_title">Your receipts</string>
+    <string name="ledger_scan">Scan</string>
+    <string name="ledger_empty">No receipts yet. Scan your next grocery receipt to see swaps that cut its carbon footprint without costing more.</string>
+    <plurals name="ledger_items">
+        <item quantity="one">%d item</item>
+        <item quantity="other">%d items</item>
+    </plurals>
+    <string name="status_pending">Reading items…</string>
+    <string name="status_failed">Could not read items</string>
+
+    <string name="share_title">Help answer the research question?</string>
+    <string name="share_body">Share anonymous swap stats (shown, accepted or dismissed, kg CO2e, price change). Never your receipts or items.</string>
+    <string name="share_yes">Share</string>
+    <string name="share_no">No thanks</string>
+
+    <string name="receipt_title">Receipt</string>
+    <string name="receipt_pending">Reading your items. This needs a connection; it will finish on its own when you are back online.</string>
+    <string name="receipt_failed">We could not read the items on this receipt.</string>
+    <string name="receipt_retry">Try again</string>
+    <string name="receipt_waiting_factors">Downloading carbon data…</string>
+    <string name="receipt_no_swaps">No swaps for this receipt: nothing on it has a lower-carbon alternative we can estimate yet.</string>
+    <string name="receipt_swaps">Swaps for next time</string>
+    <string name="receipt_items">Items</string>
+
+    <string name="card_swap">%1$s → %2$s</string>
+    <string name="card_bundle">Swap these together</string>
+    <string name="card_saves">About %1$s kg CO2e less</string>
+    <string name="card_cheaper">%1$s cheaper</string>
+    <string name="card_more">%1$s more</string>
+    <string name="card_same_price">Same price</string>
+    <string name="card_accept">I\'ll try it</string>
+    <string name="card_dismiss">Not for me</string>
+    <string name="card_accepted">You said you\'ll try it</string>
+    <string name="card_dismissed">Dismissed</string>
+    <string name="card_estimate_note">Estimates from category averages (Agribalyse).</string>
+</resources>

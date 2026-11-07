@@ -5,15 +5,26 @@ Read this before changing code in this repository.
 ## Layout
 - `core/optimizer/`: pure Kotlin/JVM. No Android or Spring imports, ever. All swap logic lives here.
 - `backend/` (separate Gradle build): Spring Boot service for receipt parsing, carbon factors and events.
-- Android modules (`app/`, `feature/*`, `core/data/`): the client.
+- `core/domain/`: pure Kotlin receipt rules (OCR rows, prices, sanitizer) and the bridge to the optimizer.
+- Android modules (`app/`, `feature/*`, `core/data/`): the client. UI reads Room only; network work runs in WorkManager.
 - `docs/adr/`: architecture decision records. Add one for any decision a reviewer would ask "why?" about.
 
 ## Build commands
 - All checks for the core module: `./gradlew :core:optimizer:check`
 - One test class: `./gradlew :core:optimizer:test --tests "dev.swapwise.optimizer.OptimizerTest"`
+- Domain checks: `./gradlew :core:domain:check`
+- Android unit tests: `./gradlew :core:data:testDebugUnitTest :feature:scan:testDebugUnitTest :feature:swaps:testDebugUnitTest`
 - Backend checks (needs Docker for Testcontainers): `cd backend && ./gradlew check`
 - Run the backend locally: `cd backend && ./gradlew bootRun`
 - Format: `./gradlew spotlessApply`
+
+## Android conventions
+- Put any rule that does not need Android into `core:domain` and test it on the JVM.
+- ViewModels expose one `StateFlow<UiState>`; screens are split into a `*Route` (gets the ViewModel) and a stateless
+  `*Screen` (previewable, testable).
+- A state change that the server should hear about writes its outbox event in the same Room transaction.
+- User-facing text goes in `strings.xml`.
+- Every Room schema change bumps the version and adds a migration test; never use destructive migration.
 
 ## Backend conventions
 - Package by feature: `parsing`, `catalog`, `events`, `security`, `shared`.

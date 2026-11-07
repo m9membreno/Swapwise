@@ -11,15 +11,17 @@ shoppers accept the suggestions? Swapwise measures that with real receipts.
 
 | Part | State |
 | --- | --- |
-| `core/optimizer`: NSGA-II, greedy baseline, brute-force oracle, swap cards | Done, 34 tests |
+| `core/optimizer`: NSGA-II, greedy baseline, brute-force oracle, swap cards | Done, 35 tests |
+| `core/domain`: OCR row rebuilding, prices, sanitizer, receipt-to-optimizer bridge | Done, 11 tests |
 | `backend/`: Spring Boot, receipt parsing, carbon factors, events | Done, unit + Testcontainers integration tests |
-| Android app: scan, ledger, swap cards, impact | Next |
+| Android app: scan, ledger, swap cards | Done: Compose, Room, WorkManager, Hilt |
+| Android app: impact screen, verified follow-through, Firebase App Check | Next |
 
 ## How it works
 
 ```
 Android app (Kotlin, Jetpack Compose)              Spring Boot backend (Kotlin)
-  CameraX + ML Kit text recognition  --OCR lines-->  POST /api/v1/receipts/parse --> hosted LLM
+  Camera/photo picker + ML Kit OCR   --OCR lines-->  POST /api/v1/receipts/parse --> hosted LLM
   Room: receipts, carbon factors, events <--ETag--   GET  /api/v1/factors            (key stays here)
   core:optimizer (NSGA-II, on device)                POST /api/v1/events (idempotent) --> Postgres
   WorkManager: retries uploads -------------------->
@@ -38,6 +40,22 @@ item lines are sent for parsing. The backend exists mainly so the LLM API key ne
 * **Swap cards** are built so that *any combination* the shopper accepts stays within budget: a pricier
   swap is bundled with the cheaper swap that pays for it
   ([ADR-002](docs/adr/ADR-002-budget-safe-suggestion-cards.md)).
+
+## The Android app in one minute
+
+| Module | What it holds |
+| --- | --- |
+| `:app` | Hilt application, navigation (type-safe routes), WorkManager setup |
+| `:feature:scan` | System camera + photo picker, ML Kit OCR, `ScanViewModel` |
+| `:feature:swaps` | Ledger, receipt detail, swap cards (MVVM, `StateFlow`) |
+| `:core:data` | Room (single source of truth), Retrofit, DataStore, workers, transactional event outbox |
+| `:core:domain` | Pure Kotlin: rebuilds receipt rows from OCR columns, reads prices, maps receipts to the optimizer |
+| `:core:optimizer` | Pure Kotlin: NSGA-II and swap cards |
+
+The UI only reads Room. Scanning saves to Room immediately; parsing, factor sync and event upload are WorkManager
+jobs that wait for a connection and retry, so everything works offline
+([ADR-005](docs/adr/ADR-005-android-scan-and-offline-flow.md)). Swaps are category-level ("chicken instead of
+beef", same weight), priced from the shopper's own past receipts when known.
 
 ## The backend in one minute
 
@@ -82,6 +100,12 @@ curl -s localhost:8080/api/v1/receipts/parse -H 'Content-Type: application/json'
 ```
 
 Carbon factors are loaded with a one-off import; see [`backend/data/README.md`](backend/data/README.md).
+
+```bash
+# Android app (JDK 17+, Android SDK; the emulator reaches the local backend at 10.0.2.2:8080)
+./gradlew :app:installDebug
+./gradlew :core:data:testDebugUnitTest :feature:scan:testDebugUnitTest :feature:swaps:testDebugUnitTest
+```
 
 ## Decisions
 

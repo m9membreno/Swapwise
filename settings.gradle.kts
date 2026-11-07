@@ -16,5 +16,10 @@ dependencyResolutionManagement {
 
 rootProject.name = "swapwise"
 
-// Android client modules. The Spring Boot backend is a separate build in backend/.
-include(":core:optimizer")
+// Android client. The Spring Boot backend is a separate build in backend/.
+include(":app")
+include(":core:optimizer") // pure Kotlin/JVM
+include(":core:domain") // pure Kotlin/JVM
+include(":core:data")
+include(":feature:scan")
+include(":feature:swaps")

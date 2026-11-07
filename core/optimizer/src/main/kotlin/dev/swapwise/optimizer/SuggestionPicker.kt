@@ -31,7 +31,8 @@ data class Suggestion(val swaps: List<Swap>) {
 }
 
 /**
- * Turns the optimizer's Pareto front into at most [maxSuggestions] cards.
+ * Turns the optimizer's Pareto front into at most [maxSuggestions] cards. Candidates are the best swap per
+ * line among all baskets on the front (see [bestSwapPerLine]).
  *
  * The key rule (see ADR-002): the shopper can accept *any* combination of the cards, so every
  * combination must stay within budget, not just the full set. A card is therefore either:
@@ -52,15 +53,8 @@ class SuggestionPicker(
     }
 
     fun pick(problem: SwapProblem, front: List<ScoredBasket>): List<Suggestion> {
-        val basket = chooseBasket(problem, front) ?: return emptyList()
-        val swaps = basket.choices.withIndex()
-            .filter { (_, option) -> option != 0 }
-            .map { (lineIndex, option) ->
-                val line = problem.lines[lineIndex]
-                val chosen = line.options[option]
-                Swap(lineIndex, line.original, chosen.product, line.quantity, chosen.familiarity)
-            }
-            .filter { it.kgCo2eSaved > 0.0 }
+        val swaps = bestSwapPerLine(problem, front)
+        if (swaps.isEmpty()) return emptyList()
 
         val savers = swaps.filter { it.costDeltaCents <= 0 }
             .sortedBy { it.costDeltaCents } // the biggest money savers first: they fund bundles best
@@ -91,15 +85,41 @@ class SuggestionPicker(
     }
 
     /**
-     * Picks the basket with the most carbon saved per unit of disruption. Returns null when no basket
-     * saves any carbon (for example, when nothing on the receipt has a greener alternative).
+     * Collects the swaps that appear anywhere on the Pareto front and keeps, for each line, the one with the
+     * best card score (carbon saved per unit of change; on a tie, the cheaper one).
+     *
+     * Why not pick one basket from the front: a basket that is ideal as a set of cards can be dominated as a
+     * whole. "Chicken instead of beef plus oat milk" is dominated by "lentils instead of beef" alone (cheaper,
+     * lower carbon, same total change), yet chicken and oat milk make two better cards than lentils makes one.
+     * Cards are accepted one by one, so they are chosen one by one; the front supplies the candidates.
      */
-    private fun chooseBasket(problem: SwapProblem, front: List<ScoredBasket>): ScoredBasket? =
-        front.filter { it.kgCo2eSaved(problem) > 0.0 && it.objectives.costCents <= problem.budgetCents }
-            .maxWithOrNull(
-                compareBy<ScoredBasket> { it.kgCo2eSaved(problem) / (1.0 + it.objectives.disruption) }
-                    .thenByDescending { it.objectives.costCents }, // on a tie, prefer the cheaper basket
-            )
+    private fun bestSwapPerLine(problem: SwapProblem, front: List<ScoredBasket>): List<Swap> {
+        val best = HashMap<Int, Swap>()
+        for (basket in front) {
+            if (basket.objectives.costCents > problem.budgetCents) continue
+            for (swap in greenSwaps(problem, basket)) {
+                val current = best[swap.lineIndex]
+                val better = current == null ||
+                    swap.score() > current.score() ||
+                    (swap.score() == current.score() && swap.costDeltaCents < current.costDeltaCents)
+                if (better) best[swap.lineIndex] = swap
+            }
+        }
+        return best.values.sortedBy { it.lineIndex }
+    }
+
+    private fun Swap.score(): Double = kgCo2eSaved / (1.0 + familiarity.disruption)
+
+    /** A basket's swaps that lower carbon; swaps that raise it are never shown. */
+    private fun greenSwaps(problem: SwapProblem, basket: ScoredBasket): List<Swap> =
+        basket.choices.withIndex()
+            .filter { (_, option) -> option != 0 }
+            .map { (lineIndex, option) ->
+                val line = problem.lines[lineIndex]
+                val chosen = line.options[option]
+                Swap(lineIndex, line.original, chosen.product, line.quantity, chosen.familiarity)
+            }
+            .filter { it.kgCo2eSaved > 0.0 }
 
     /** Greedily adds the biggest money savers until the bundle no longer raises the cost. */
     private fun fund(spender: Swap, savers: List<Swap>): List<Swap>? {
