@@ -20,8 +20,10 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.swapwise.data.EventUploader
 import dev.swapwise.data.FactorRepository
 import dev.swapwise.data.ReceiptRepository
+import dev.swapwise.data.SwapRepository
 import retrofit2.HttpException
 import java.io.IOException
+import kotlinx.coroutines.CancellationException
 import java.time.Duration
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -41,11 +43,21 @@ class ParseReceiptWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
     private val receipts: ReceiptRepository,
+    private val swaps: SwapRepository,
 ) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
         val receiptId = inputData.getString(KEY_RECEIPT_ID) ?: return Result.failure()
         return try {
             receipts.parse(receiptId)
+            // A new receipt is new evidence for cards accepted earlier. Local-only work; a failure here must not
+            // turn a successful parse into a retry.
+            try {
+                swaps.verifyAccepted()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Follow-through check failed", e)
+            }
             Result.success()
         } catch (e: Exception) {
             if (e.isRetryable() && runAttemptCount < MAX_ATTEMPTS) {

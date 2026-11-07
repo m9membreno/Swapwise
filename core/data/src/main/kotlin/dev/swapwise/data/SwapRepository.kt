@@ -11,10 +11,16 @@ import dev.swapwise.data.db.SuggestionStatus
 import dev.swapwise.data.db.SwapwiseDatabase
 import dev.swapwise.data.settings.AppSettings
 import dev.swapwise.data.work.WorkScheduler
+import dev.swapwise.domain.AcceptedCard
 import dev.swapwise.domain.BasketBuilder
+import dev.swapwise.domain.CardAnswer
+import dev.swapwise.domain.CardOutcome
+import dev.swapwise.domain.FollowThrough
+import dev.swapwise.domain.FollowThroughChecker
 import dev.swapwise.domain.FoodCategory
 import dev.swapwise.domain.PriceBook
 import dev.swapwise.domain.PurchaseUnit
+import dev.swapwise.domain.ReceiptCategories
 import dev.swapwise.domain.ReceiptItem
 import dev.swapwise.domain.SwapCards
 import dev.swapwise.optimizer.SwapEngine
@@ -117,11 +123,57 @@ class SwapRepository @Inject constructor(
         val changed = db.withTransaction {
             val suggestion = suggestionDao.get(suggestionId) ?: return@withTransaction false
             if (suggestion.status != SuggestionStatus.SHOWN) return@withTransaction false // answered already
-            suggestionDao.setStatus(suggestionId, status)
+            suggestionDao.setAnswered(suggestionId, status, clock.millis())
             if (share) eventDao.insert(suggestion.toEvent(eventType, clock.millis()))
             true
         }
         if (changed && share) scheduler.enqueueEventUpload()
+    }
+
+    /** Impact screen data: every card and how it turned out. */
+    fun observeOutcomes(): Flow<List<CardOutcome>> = suggestionDao.observeAll().map { list ->
+        list.map { entity ->
+            CardOutcome(
+                answer = when (entity.status) {
+                    SuggestionStatus.SHOWN -> CardAnswer.SHOWN
+                    SuggestionStatus.ACCEPTED -> CardAnswer.ACCEPTED
+                    SuggestionStatus.DISMISSED -> CardAnswer.DISMISSED
+                },
+                kgCo2eSaved = entity.kgCo2eSaved,
+                costDeltaCents = entity.costDeltaCents,
+                followThrough = entity.followThrough?.let { name -> FollowThrough.entries.firstOrNull { it.name == name } },
+            )
+        }
+    }
+
+    /**
+     * Re-checks accepted cards against all parsed receipts. Runs after every newly parsed receipt and when the
+     * Impact screen opens (so cards whose window ended move to NOT_SEEN). A result is written only when it
+     * changes, and a VERIFIED event is queued only on the change to VERIFIED_NEW, so running this repeatedly
+     * never sends duplicates. Already-bought swaps are kept on the phone but not reported as verified.
+     */
+    suspend fun verifyAccepted() {
+        val cards = suggestionDao.acceptedUnresolved()
+        if (cards.isEmpty()) return
+        val receipts = receiptDao.receiptCategories()
+            .groupBy { it.receiptId }
+            .map { (_, rows) -> ReceiptCategories(rows.first().scannedAtMillis, rows.mapNotNull { FoodCategory.fromCode(it.category) }.toSet()) }
+        val now = clock.millis()
+        val changes = cards.mapNotNull { entity ->
+            val targets = json.decodeFromString<List<StoredSwap>>(entity.swapsJson).mapNotNull { FoodCategory.fromCode(it.toCategory) }.toSet()
+            if (targets.isEmpty()) return@mapNotNull null
+            val result = FollowThroughChecker.evaluate(AcceptedCard(entity.id, entity.answeredAtMillis ?: entity.createdAtMillis, targets), receipts, now)
+            if (result.name == entity.followThrough) null else entity to result
+        }
+        if (changes.isEmpty()) return
+        val share = settings.shareStats.first() == true
+        db.withTransaction {
+            changes.forEach { (entity, result) ->
+                suggestionDao.setFollowThrough(entity.id, result.name)
+                if (share && result == FollowThrough.VERIFIED_NEW) eventDao.insert(entity.toEvent("VERIFIED", now))
+            }
+        }
+        if (share && changes.any { it.second == FollowThrough.VERIFIED_NEW }) scheduler.enqueueEventUpload()
     }
 
     private fun SuggestionEntity.toEvent(type: String, at: Long) = PendingEventEntity(

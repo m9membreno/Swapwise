@@ -12,10 +12,10 @@ shoppers accept the suggestions? Swapwise measures that with real receipts.
 | Part | State |
 | --- | --- |
 | `core/optimizer`: NSGA-II, greedy baseline, brute-force oracle, swap cards | Done, 35 tests |
-| `core/domain`: OCR row rebuilding, prices, sanitizer, receipt-to-optimizer bridge | Done, 11 tests |
+| `core/domain`: OCR rows, prices, sanitizer, optimizer bridge, follow-through, impact stats | Done, 20 tests |
 | `backend/`: Spring Boot, receipt parsing, carbon factors, events | Done, unit + Testcontainers integration tests |
-| Android app: scan, ledger, swap cards | Done: Compose, Room, WorkManager, Hilt |
-| Android app: impact screen, verified follow-through, Firebase App Check | Next |
+| Android app: scan, ledger, swap cards, impact screen, verified follow-through | Done: Compose, Room (v2 + migration test), WorkManager, Hilt |
+| Firebase App Check in the app, real Agribalyse mapping, BLS seed prices, beta | Next |
 
 ## How it works
 
@@ -57,6 +57,12 @@ jobs that wait for a connection and retry, so everything works offline
 ([ADR-005](docs/adr/ADR-005-android-scan-and-offline-flow.md)). Swaps are category-level ("chicken instead of
 beef", same weight), priced from the shopper's own past receipts when known.
 
+**Verified follow-through.** After every new receipt, accepted cards are checked: a card is *verified* when the
+swapped-to category appears on a receipt within 30 days of accepting it **and** did not appear in the 30 days
+before. Without that second check, someone who already buys chicken weekly would "follow through" on every
+beef -> chicken card without changing anything. Only verified-new swaps count as avoided carbon on the Impact
+screen and in the beta metrics.
+
 ## The backend in one minute
 
 | Endpoint | What it does | Failure handling |
@@ -79,9 +85,9 @@ failures by reason, quota rejections.
 | Greedy, % of best possible saving | 83% | 39 random 8-item baskets vs brute force |
 | NSGA-II, % of best possible saving | 100% (worst case 100%) | same baskets |
 | Optimizer time, desktop JVM | 85 ms p50, 98 ms p95 | warm, 10 to 50 lines |
-| Optimizer time, mid-range phone | to measure | target under 300 ms p95 |
+| Optimizer time, mid-range phone | to measure | `OptimizerTimingTest` on a real phone; target under 300 ms p95 |
 | Parser line accuracy | to measure | 100 hand-labeled lines |
-| Swap acceptance, verified follow-through | to measure | 10 to 20 person beta |
+| Swap acceptance, verified follow-through | to measure | 10 to 20 person beta; [`backend/docs/beta-metrics.sql`](backend/docs/beta-metrics.sql) |
 
 ## Running it
 
@@ -105,7 +111,11 @@ Carbon factors are loaded with a one-off import; see [`backend/data/README.md`](
 # Android app (JDK 17+, Android SDK; the emulator reaches the local backend at 10.0.2.2:8080)
 ./gradlew :app:installDebug
 ./gradlew :core:data:testDebugUnitTest :feature:scan:testDebugUnitTest :feature:swaps:testDebugUnitTest
+./gradlew connectedDebugAndroidTest   # on a device: Room migration test, swap card UI test, optimizer timing
 ```
+
+`core/data/schemas/.../1.json` (the v1 Room schema) was written by hand because v1 was never built; Room exports
+`2.json` on the first build, and `MigrationTest` checks the upgraded database against it.
 
 ## Decisions
 

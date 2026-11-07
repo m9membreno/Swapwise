@@ -35,4 +35,16 @@
     <string name="card_accepted">You said you\'ll try it</string>
     <string name="card_dismissed">Dismissed</string>
     <string name="card_estimate_note">Estimates from category averages (Agribalyse).</string>
+
+    <string name="ledger_impact">Impact</string>
+    <string name="impact_title">Your impact</string>
+    <string name="impact_empty">No swaps yet. Scan a receipt to get your first suggestions.</string>
+    <string name="impact_kg_value">%1$s kg</string>
+    <string name="impact_kg_verified">CO2e avoided, confirmed by your later receipts</string>
+    <string name="impact_money_verified">saved on those confirmed swaps</string>
+    <string name="impact_count_of">%1$d of %2$d</string>
+    <string name="impact_accepted">swaps you said you would try</string>
+    <string name="impact_follow_through">of tried swaps showed up as something new on a later receipt</string>
+    <string name="impact_breakdown">Confirmed new: %1$d · already buying it: %2$d · still checking: %3$d. If you made every swap you accepted: %4$s kg CO2e.</string>
+    <string name="impact_method">A swap is confirmed when the new item appears on a receipt within 30 days of accepting it, and you had not bought it in the 30 days before. Carbon figures are estimates from category averages.</string>
 </resources>

@@ -16,6 +16,9 @@ data class ReceiptSummary(
     val totalCents: Long?,
 )
 
+/** One category bought on one receipt, for follow-through checks. */
+data class ReceiptCategoryRow(val receiptId: String, val scannedAtMillis: Long, val category: String)
+
 /** Parsed result for one uploaded row, keyed by its position in the upload. */
 data class ParsedRow(
     val uploadPosition: Int,
@@ -60,6 +63,15 @@ interface ReceiptDao {
     /** Every parsed line from every receipt: the shopper's own price history. */
     @Query("select * from receipt_line where category is not null and priceCents is not null")
     suspend fun allParsedLines(): List<ReceiptLineEntity>
+
+    @Query(
+        """
+        select distinct r.id as receiptId, r.scannedAtMillis, l.category
+        from receipt r join receipt_line l on l.receiptId = r.id
+        where r.status = 'PARSED' and l.category is not null
+        """,
+    )
+    suspend fun receiptCategories(): List<ReceiptCategoryRow>
 
     @Query("select status from receipt where id = :id")
     suspend fun status(id: String): ReceiptStatus?
@@ -122,8 +134,18 @@ interface SuggestionDao {
     @Insert
     suspend fun insertAll(suggestions: List<SuggestionEntity>)
 
-    @Query("update suggestion set status = :status where id = :id")
-    suspend fun setStatus(id: String, status: SuggestionStatus)
+    @Query("update suggestion set status = :status, answeredAtMillis = :answeredAtMillis where id = :id")
+    suspend fun setAnswered(id: String, status: SuggestionStatus, answeredAtMillis: Long)
+
+    @Query("select * from suggestion order by createdAtMillis desc")
+    fun observeAll(): Flow<List<SuggestionEntity>>
+
+    /** Accepted cards whose follow-through is not final yet. */
+    @Query("select * from suggestion where status = 'ACCEPTED' and (followThrough is null or followThrough = 'PENDING')")
+    suspend fun acceptedUnresolved(): List<SuggestionEntity>
+
+    @Query("update suggestion set followThrough = :followThrough where id = :id")
+    suspend fun setFollowThrough(id: String, followThrough: String)
 }
 
 @Dao

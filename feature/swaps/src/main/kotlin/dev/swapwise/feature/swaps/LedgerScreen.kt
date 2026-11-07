@@ -35,9 +35,14 @@ import java.text.DateFormat
 import java.util.Date
 
 @Composable
-fun LedgerRoute(onScan: () -> Unit, onOpenReceipt: (String) -> Unit, viewModel: LedgerViewModel = hiltViewModel()) {
+fun LedgerRoute(
+    onScan: () -> Unit,
+    onOpenReceipt: (String) -> Unit,
+    onOpenImpact: () -> Unit,
+    viewModel: LedgerViewModel = hiltViewModel(),
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    LedgerScreen(state, onScan, onOpenReceipt, viewModel::answerShareStats)
+    LedgerScreen(state, onScan, onOpenReceipt, onOpenImpact, viewModel::answerShareStats)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -46,10 +51,16 @@ fun LedgerScreen(
     state: LedgerUiState,
     onScan: () -> Unit,
     onOpenReceipt: (String) -> Unit,
+    onOpenImpact: () -> Unit,
     onAnswerShareStats: (Boolean) -> Unit,
 ) {
     Scaffold(
-        topBar = { TopAppBar(title = { Text(stringResource(R.string.ledger_title)) }) },
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.ledger_title)) },
+                actions = { TextButton(onClick = onOpenImpact) { Text(stringResource(R.string.ledger_impact)) } },
+            )
+        },
         floatingActionButton = {
             ExtendedFloatingActionButton(onClick = onScan) { Text(stringResource(R.string.ledger_scan)) }
         },

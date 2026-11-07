@@ -8,6 +8,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import dev.swapwise.data.BuildConfig
+import dev.swapwise.data.db.ALL_MIGRATIONS
 import dev.swapwise.data.db.EventDao
 import dev.swapwise.data.db.FactorDao
 import dev.swapwise.data.db.ReceiptDao
@@ -41,7 +42,9 @@ object DataModule {
     @Provides
     @Singleton
     fun database(@ApplicationContext context: Context): SwapwiseDatabase =
-        Room.databaseBuilder(context, SwapwiseDatabase::class.java, "swapwise.db").build()
+        Room.databaseBuilder(context, SwapwiseDatabase::class.java, "swapwise.db")
+            .addMigrations(*ALL_MIGRATIONS)
+            .build()
 
     @Provides fun receiptDao(db: SwapwiseDatabase): ReceiptDao = db.receiptDao()
 

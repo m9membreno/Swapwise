@@ -65,6 +65,10 @@ data class SuggestionEntity(
     val factorVersion: Int,
     val status: SuggestionStatus,
     val createdAtMillis: Long,
+    /** When the shopper accepted or dismissed the card (added in schema v2). */
+    val answeredAtMillis: Long? = null,
+    /** A `FollowThrough` name once an accepted card has been checked against later receipts (schema v2). */
+    val followThrough: String? = null,
 )
 
 /**

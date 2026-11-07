@@ -14,6 +14,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.AndroidEntryPoint
 import dev.swapwise.feature.scan.ScanRoute
+import dev.swapwise.feature.swaps.ImpactRoute
 import dev.swapwise.feature.swaps.LedgerRoute
 import dev.swapwise.feature.swaps.ReceiptRoute
 import kotlinx.serialization.Serializable
@@ -27,6 +28,9 @@ data object Scan
 
 @Serializable
 data class Receipt(val receiptId: String)
+
+@Serializable
+data object Impact
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -42,7 +46,11 @@ private fun SwapwiseNavHost() {
     val nav = rememberNavController()
     NavHost(navController = nav, startDestination = Ledger) {
         composable<Ledger> {
-            LedgerRoute(onScan = { nav.navigate(Scan) }, onOpenReceipt = { id -> nav.navigate(Receipt(id)) })
+            LedgerRoute(
+                onScan = { nav.navigate(Scan) },
+                onOpenReceipt = { id -> nav.navigate(Receipt(id)) },
+                onOpenImpact = { nav.navigate(Impact) },
+            )
         }
         composable<Scan> {
             ScanRoute(
@@ -53,6 +61,7 @@ private fun SwapwiseNavHost() {
             )
         }
         composable<Receipt> { ReceiptRoute() }
+        composable<Impact> { ImpactRoute() }
     }
 }
 

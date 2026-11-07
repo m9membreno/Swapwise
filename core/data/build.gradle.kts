@@ -35,6 +35,7 @@ kotlin {
 
 room {
     // Exported schemas are committed, so every migration can be tested against the real previous schema.
+    // The Room Gradle plugin also packages them as instrumented-test assets for MigrationTestHelper.
     schemaDirectory("$projectDir/schemas")
 }
 
@@ -65,4 +66,8 @@ dependencies {
     testImplementation(libs.junit4)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.okhttp.mockwebserver)
+
+    androidTestImplementation(libs.room.testing)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.ext.junit)
 }
