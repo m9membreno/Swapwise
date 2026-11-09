@@ -8,10 +8,11 @@ import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator
+import org.springframework.security.oauth2.core.OAuth2Error
+import org.springframework.security.oauth2.core.OAuth2TokenValidator
+import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult
 import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm
 import org.springframework.security.oauth2.jwt.Jwt
-import org.springframework.security.oauth2.jwt.JwtClaimNames
-import org.springframework.security.oauth2.jwt.JwtClaimValidator
 import org.springframework.security.oauth2.jwt.JwtDecoder
 import org.springframework.security.oauth2.jwt.JwtException
 import org.springframework.security.oauth2.jwt.JwtValidators
@@ -44,10 +45,20 @@ class FirebaseAppCheckVerifier(properties: SwapwiseProperties) : AppCheckVerifie
                 setJwtValidator(
                     DelegatingOAuth2TokenValidator(
                         JwtValidators.createDefaultWithIssuer("https://firebaseappcheck.googleapis.com/${settings.projectNumber}"),
-                        JwtClaimValidator<List<String>?>(JwtClaimNames.AUD) { aud -> aud != null && audience in aud },
+                        audienceValidator(audience),
                     ),
                 )
             }
+    }
+
+    /** Accepts the token only if its `aud` claim lists our Firebase project. A missing claim is a failure. */
+    private fun audienceValidator(expected: String) = OAuth2TokenValidator<Jwt> { jwt ->
+        val audiences: List<String>? = jwt.audience
+        if (audiences != null && expected in audiences) {
+            OAuth2TokenValidatorResult.success()
+        } else {
+            OAuth2TokenValidatorResult.failure(OAuth2Error("invalid_token", "App Check token has the wrong audience", null))
+        }
     }
 
     override fun isValid(token: String): Boolean {
