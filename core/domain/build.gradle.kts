@@ -5,9 +5,17 @@ plugins {
     jacoco
 }
 
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
 kotlin {
-    jvmToolchain(17)
-    compilerOptions { allWarningsAsErrors.set(true) }
+    // Compiled by the JDK Gradle runs on (21), emitting Java 17 bytecode so Android can use these modules.
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        allWarningsAsErrors.set(true)
+    }
 }
 
 dependencies {

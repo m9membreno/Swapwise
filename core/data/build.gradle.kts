@@ -30,7 +30,9 @@ android {
 }
 
 kotlin {
-    jvmToolchain(17)
+    // Compile with the JDK Gradle runs on (21, see gradle/gradle-daemon-jvm.properties) and emit Java 17 bytecode,
+    // matching compileOptions above. No separate JDK 17 install needed.
+    compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) }
 }
 
 room {
